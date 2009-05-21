@@ -1,3 +1,15 @@
+
+//
+// loadll.c
+//
+//   This program simply loads a DLL into its address space.
+//
+//   You specify a library name in the command line.
+//   It calls LoadLibrary against the 1st parameter.
+//   When you press Ctrl+C, it calls FreeLibrary and exits.
+//
+
+
 #include <windows.h>
 #include "../shared/shared.h"
 
@@ -92,6 +104,8 @@ int main(){
     dout("The DLL has been loaded. Press Ctrl+C to exit.\n");
 
     while(!break_all) Sleep(100);
+
+    dout("...");
 
     FreeLibrary(h);
 

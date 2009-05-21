@@ -1,3 +1,15 @@
+
+//
+// ut2.c
+//
+//   Perfomrs a pipe transaction.
+//
+//   The program sends pipe_in_buffer_t and receives pipe_out_buffer_t
+//   in a single transaction, which emulates the service program.
+//   Everything is hardcoded.
+//
+
+
 #include <windows.h>
 #include "../shared/shared.h"
 #include "../shared/shpipe.h"

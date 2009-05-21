@@ -1,3 +1,13 @@
+
+//
+// ut1.c
+//
+//   This program calculates MD5-hashes against
+//   the concatenation of a username, realm and password.
+//
+//   The username, the realm and the password are hardcoded.
+//
+
 #include <windows.h>
 #include "../shared/shared.h"
 #include "../shared/md5.h"
