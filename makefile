@@ -65,9 +65,14 @@ UT1_OBJS=\
 	$(ODIR)\ut1.obj\
 	$(ODIR)\dout_f.obj\
 
+UT2_OBJS=\
+	$(ODIR)\utils.obj\
+	$(ODIR)\ut2.obj\
+	$(ODIR)\dout_so.obj\
+
 # standart rules
 
-all : samsrv.dll lsamod.dll loadll.exe
+all : samsrv.dll lsamod.dll loadll.exe ut2.exe
 
 re : clean all
 
@@ -79,6 +84,9 @@ clean :
 
 ut1.exe : $(UT1_OBJS)
 	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:ut1.exe $(UT1_OBJS) kernel32.lib user32.lib
+
+ut2.exe : $(UT2_OBJS)
+	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:ut2.exe $(UT2_OBJS) kernel32.lib user32.lib
 
 loadll.exe : $(LOADLL_OBJS)
 	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:loadll.exe $(LOADLL_OBJS) kernel32.lib user32.lib

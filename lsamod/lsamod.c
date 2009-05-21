@@ -15,6 +15,9 @@ static DWORD WINAPI working_thread(LPVOID param){
     lm_sam_t    lm_sam;
     lm_pipe_t   lm_pipe;
 
+
+    // dout("Welcom from the lsamod working thread!\n");
+
     init_lm_sam(&lm_sam);
     init_lm_pipe(&lm_pipe, &lm_sam);
 
@@ -28,6 +31,8 @@ static DWORD WINAPI working_thread(LPVOID param){
 
     lm_pipe.state->terminate(&lm_pipe);
     lm_sam.state->terminate(&lm_sam);
+
+    // dout("Lsamod working thread says: goodbye!\n");
 
     return 0;
 }

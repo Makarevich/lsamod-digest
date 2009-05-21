@@ -22,6 +22,8 @@ DEFINE_STATE(writing);
 #undef DEFINE_STATE
 
 void init_lm_pipe(lm_pipe_t* This, lm_sam_t *sam_peer){
+    This->sam_peer = sam_peer;
+
     This->pending = 0;
 
     This->pipe = NULL;
@@ -42,6 +44,8 @@ static int enter_pipe_writing(lm_pipe_t *This);
 //
 
 static int enter_pipe_closed(lm_pipe_t *This){
+    // dout("PIPE: Entering closed state\n");
+
     if(This->pipe){
         CloseHandle(This->pipe);
         This->pipe = NULL;
@@ -96,6 +100,8 @@ static int onterminate_pipe_closed(lm_pipe_t *This){
 //
 
 static int enter_pipe_conn(lm_pipe_t *This){
+    // dout("PIPE: Entering conn state\n");
+
     This->pending = 0;
     This->state = &state_pipe_conn;
     return 1;
@@ -118,7 +124,7 @@ static int onthink_pipe_conn(lm_pipe_t *This){
                 This->pending = 1;
                 break;
             default:
-                DOUTST2("ConnectNamedPipe", gle);
+                DOUTST2("ConnectNamedPipe", gle);       // FIXME: force entering closed state here
                 return 0;
             }
         }
@@ -136,7 +142,7 @@ static int onthink_pipe_conn(lm_pipe_t *This){
                 connected = 0;
                 break;
             default:
-                DOUTST2("GetOverlappedResult (ConnectNamedPipe)", gle);
+                DOUTST2("GetOverlappedResult (ConnectNamedPipe)", gle);   // FIXME: force entering closed state here
                 return 0;
             }
         }
@@ -174,6 +180,8 @@ static int pipe_reading_parse_input_buffer(lm_pipe_t *This){
     NTSTATUS            res;
 
     if(This->buffer_size != sizeof(pipe_in_buffer_t)){
+        dout(va("ERROR: input buffer size mismatch: %u != %u", This->buffer_size, sizeof(pipe_in_buffer_t)));
+
         out->result = STATUS_INVALID_BUFFER_SIZE;
         memset(out->hash, 0, sizeof(out->hash));
     }else{
@@ -181,6 +189,7 @@ static int pipe_reading_parse_input_buffer(lm_pipe_t *This){
         uname.MaximumLength = uname.Length;
         uname.Buffer = in->wchars;
 
+        dout("Calling sam peer...\n");
         This->sam_peer->state->data(This->sam_peer, &uname, hash, &res);   // call sam peer
 
         out->result = res;
@@ -211,12 +220,17 @@ static int pipe_reading_long_input(lm_pipe_t *This){
 static int enter_pipe_reading(lm_pipe_t *This){
     DWORD       gle;
 
+    // dout("PIPE: Entering reading state\n");
+
     if(ReadFile(This->pipe, This->buffer, sizeof(This->buffer), &This->buffer_size, &This->ol)){
         return pipe_reading_parse_input_buffer(This);
     }else{
         switch(gle = GetLastError()){
         case ERROR_MORE_DATA:
             return pipe_reading_long_input(This);
+        case ERROR_BROKEN_PIPE:
+            DisconnectNamedPipe(This->pipe);
+            return enter_pipe_conn(This);
         case ERROR_IO_PENDING:
             This->state = &state_pipe_reading;
             return 1;
@@ -236,6 +250,9 @@ static int onthink_pipe_reading(lm_pipe_t *This){
         switch(gle = GetLastError()){
         case ERROR_MORE_DATA:
             return pipe_reading_long_input(This);
+        case ERROR_BROKEN_PIPE:
+            DisconnectNamedPipe(This->pipe);
+            return enter_pipe_conn(This);
         case ERROR_IO_INCOMPLETE:
             return 1;
         default:
@@ -262,10 +279,15 @@ static int enter_pipe_writing(lm_pipe_t *This){
     DWORD       gle;
     DWORD       num;
 
+    // dout("PIPE: Entering writing state\n");
+
     if(WriteFile(This->pipe, This->buffer, This->buffer_size, &num, &This->ol)){
         return enter_pipe_reading(This);
     }else{
         switch(gle = GetLastError()){
+        case ERROR_BROKEN_PIPE:
+            DisconnectNamedPipe(This->pipe);
+            return enter_pipe_conn(This);
         case ERROR_IO_PENDING:
             This->state = &state_pipe_writing;
             return 1;
@@ -284,6 +306,9 @@ static int onthink_pipe_writing(lm_pipe_t *This){
         return enter_pipe_reading(This);
     }else{
         switch(gle = GetLastError()){
+        case ERROR_BROKEN_PIPE:
+            DisconnectNamedPipe(This->pipe);
+            return enter_pipe_conn(This);
         case ERROR_IO_INCOMPLETE:
             return 1;
         default:

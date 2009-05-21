@@ -101,6 +101,8 @@ static int ondata_no_sam(struct lm_sam_s *This, PUNICODE_STRING uname, HASH hash
     SAMPR_HANDLE                    sdomain = NULL;
     NTSTATUS                        status;
 
+    // dout("Opening sam...\n");
+
     if((status = SamIConnect(NULL, &ssrv, 0, SAM_SERVER_CONNECT)) != STATUS_SUCCESS){
         DOUTST2("SamIConnect", status);
         *result = status;
@@ -114,6 +116,8 @@ static int ondata_no_sam(struct lm_sam_s *This, PUNICODE_STRING uname, HASH hash
         SamrCloseHandle(ssrv);
         return 0;
     }
+
+    // dout("Sam has been opened\n");
 
     This->sam_server = ssrv;
     This->sam_domain = sdomain;
@@ -151,6 +155,8 @@ static int onthink_sam_opened(struct lm_sam_s *This){
     DWORD       then = This->last_sam_activity;
 
     if((now - then) > SAM_CONNECTION_TIMEOUT){
+        // dout("Closing sam due to timeout\n");
+
         close_sam(This);
         This->state = &state_no_sam;
     }
@@ -189,13 +195,17 @@ static int ondata_sam_opened(struct lm_sam_s *This, PUNICODE_STRING uname, HASH 
     SamIFree_SAMPR_USER_INFO_BUFFER(puser_info_buffer, UserAllInformation);
     SamIFreeSidAndAttributesList(&sidattr);
 
+    *result = STATUS_SUCCESS;
+    memcpy(hash, "\x12\x34\x56\x78" "\x11\x11\x11\x11" "\xaa\xCC\xaa\xaa" "\xbb\xbb\xbb\xbb", HASHLEN);
+
+#if 0
     status = SamIRetrievePrimaryCredentials(sam_user, &u_password, &pwdigest_creds, &cred_sz);
     if(status != STATUS_SUCCESS){
         DOUTST2("SamIRetrievePrimaryCredentials", status);
         *result = status;
     }else{
         if(cred_sz != sizeof(WDIGEST_CREDENTIALS)){
-            dout(va("WDigest credentials size mismatrch: %u != %u\n", cred_sz, sizeof(WDIGEST_CREDENTIALS)));
+            dout(va("WDigest credentials size mismatrch: %i (%08X) != %i\n", cred_sz, cred_sz, sizeof(WDIGEST_CREDENTIALS)));
             *result = STATUS_INVALID_BUFFER_SIZE;
         }else{
             memcpy(hash, pwdigest_creds->Hash1, sizeof(hash));
@@ -253,6 +263,7 @@ static int ondata_sam_opened(struct lm_sam_s *This, PUNICODE_STRING uname, HASH 
 
         LocalFree(pwdigest_creds);
     }
+#endif
     
     SamrCloseHandle(sam_user);
 
