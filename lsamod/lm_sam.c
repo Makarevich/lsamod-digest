@@ -1,27 +1,40 @@
 
 
 #include "lm_sam.h"
+#include "../samsrv/samsrv.h"
 
 #define DOUTST2(api, status)        DOUTST("lm_sam", api, status)
 
 #define SAM_CONNECTION_TIMEOUT      5000        // the timeout, after which the sam connection is closed and the object is transferred
                                                 // from state 3 to state 2
 
+#ifndef STATUS_SUCCESS
+#define STATUS_SUCCESS    0
+#endif 
+
+int onthink_dummy(struct lm_sam_s *This);
+int ondata_no_sid(struct lm_sam_s *This, PUNICODE_STRING uname, HASH hash, NTSTATUS *result);
+int onterminate_no_sid(struct lm_sam_s *This);
+int ondata_no_sam(struct lm_sam_s *This, PUNICODE_STRING uname, HASH hash, NTSTATUS *result);
+int onterminate_no_sam(struct lm_sam_s *This);
+int onthink_sam_opened(struct lm_sam_s *This);
+int ondata_sam_opened(struct lm_sam_s *This, PUNICODE_STRING uname, HASH hash, NTSTATUS *result);
+int onterminate_sam_opened(struct lm_sam_s *This);
 
 lm_sam_state_t          state_no_sid = {onthink_dummy, ondata_no_sid, onterminate_no_sid};
 lm_sam_state_t          state_no_sam = {onthink_dummy, ondata_no_sam, onterminate_no_sam};
 lm_sam_state_t          state_sam_opened = {onthink_sam_opened, ondata_sam_opened, onterminate_sam_opened};
 
 void init_lm_sam(lm_sam_t* This){
-    state = state_no_sid;
+    This->lsa_policy_info_buffer = NULL;
+    This->domain_sid = NULL;
 
-    lsa_policy_info_buffer = NULL;
-    domain_sid = NULL;
+    This->sam_server = NULL;
+    This->sam_domain = NULL;
 
-    sam_server = NULL;
-    sam_domain = NULL
+    This->last_sam_activity = 0;
 
-    last_sam_activity = 0;
+    This->state = &state_no_sid;
 }
 
 //
@@ -68,8 +81,8 @@ static int ondata_no_sid(struct lm_sam_s *This, PUNICODE_STRING uname, HASH hash
     This->domain_sid = pdomain_info->DomainSid;
 
     // delegate processing to no_sam state
-    This->state = state_no_sam;
-    return This->state->ondata_no_sid(This, uname);
+    This->state = &state_no_sam;
+    return This->state->data(This, uname, hash, result);
 }
 
 static int onterminate_no_sid(struct lm_sam_s *This){
@@ -95,27 +108,27 @@ static int ondata_no_sam(struct lm_sam_s *This, PUNICODE_STRING uname, HASH hash
     }
 
     // FIXME: specify proper DesiredAccess in a call to SamrOpenDomain
-    if((status = SamrOpenDomain(ssrv, DOMAIN_LOOKUP | DOMAIN_LIST_ACCOUNTS | DOMAIN_READ_OTHER_PARAMETERS, pdomain_info_DomainSid, &sdomain)) != STATUS_SUCCESS){
+    if((status = SamrOpenDomain(ssrv, DOMAIN_LOOKUP | DOMAIN_LIST_ACCOUNTS | DOMAIN_READ_OTHER_PARAMETERS, This->domain_sid, &sdomain)) != STATUS_SUCCESS){
         DOUTST2("SamrOpenDomain", status);
         *result = status;
         SamrCloseHandle(ssrv);
         return 0;
     }
 
-    sam_server = ssrv;
-    sam_domain = sdomain;
+    This->sam_server = ssrv;
+    This->sam_domain = sdomain;
 
     // delegate processing to sam_opened state
-    This->state = state_sam_opened;
-    return This->state->data(This, uname);
+    This->state = &state_sam_opened;
+    return This->state->data(This, uname, hash, result);
 }
 
 static int onterminate_no_sam(struct lm_sam_s *This){
     LsaFreeMemory(This->lsa_policy_info_buffer);
-    lsa_policy_info_buffer = NULL;
-    domain_sid = NULL;
+    This->lsa_policy_info_buffer = NULL;
+    This->domain_sid = NULL;
 
-    This->state = state_no_sid;
+    This->state = &state_no_sid;
     return This->state->terminate(This);
 }
 
@@ -139,7 +152,7 @@ static int onthink_sam_opened(struct lm_sam_s *This){
 
     if((now - then) > SAM_CONNECTION_TIMEOUT){
         close_sam(This);
-        This->state = state_no_sam;
+        This->state = &state_no_sam;
     }
 
     return 1;
@@ -149,7 +162,6 @@ static int ondata_sam_opened(struct lm_sam_s *This, PUNICODE_STRING uname, HASH 
     WCHAR                       w_password[] = L"WDigest";
     UNICODE_STRING              u_password = {sizeof(w_password) - sizeof(WCHAR), sizeof(w_password) - sizeof(WCHAR), w_password};
     char                        astr[64];
-    PUNICODE_STRING             uname;
     PSAMPR_USER_INFO_BUFFER     puser_info_buffer;
     SidAndAttributesList        sidattr;
     SAMPR_HANDLE                sam_user;
@@ -247,9 +259,9 @@ static int ondata_sam_opened(struct lm_sam_s *This, PUNICODE_STRING uname, HASH 
     return (*result == STATUS_SUCCESS)?1:0;
 }
 
-static int onterminate_no_sam(struct lm_sam_s *This){
+static int onterminate_sam_opened(struct lm_sam_s *This){
     close_sam(This);
-    This->state = state_no_sam;
+    This->state = &state_no_sam;
     return This->state->terminate(This);
 }
 

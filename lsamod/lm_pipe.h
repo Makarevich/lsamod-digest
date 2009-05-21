@@ -3,13 +3,13 @@
 #ifndef __LM_PIPE_H__
 #define __LM_PIPE_H__
 
-#include <windows.h>
+//#include <windows.h>
 #include "lm_sam.h"
 
-#define PIPE_IO_BUFFE_SIZE      1024        // this value is recommended to be specified in ConnectNamedPipe
+#define PIPE_IO_BUFFER_SIZE      1024        // this value is recommended to be specified in ConnectNamedPipe
 
-typedef int (lm_pipe_onthink_t*)(struct lm_pipe_s *This);
-typedef int (lm_pipe_onterminate_t*)(struct lm_pipe_s *This);
+typedef int (*lm_pipe_onthink_t)(struct lm_pipe_s *This);
+typedef int (*lm_pipe_onterminate_t)(struct lm_pipe_s *This);
 
 typedef struct {
     lm_pipe_onthink_t       think;
@@ -30,7 +30,7 @@ typedef struct lm_pipe_s {
     DWORD               buffer_size;
 } lm_pipe_t;
 
-void init_lm_pipe(lm_pipe_t* This);
+void init_lm_pipe(lm_pipe_t* This, lm_sam_t *sam_peer);
 
 #endif // __LM_PIPE_H__
 

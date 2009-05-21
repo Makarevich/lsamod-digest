@@ -20,7 +20,7 @@
 
 
 typedef struct {
-    DWORD       wchar_count;
+    WORD        wchar_count;
     WCHAR       wchars[256];
 } pipe_in_buffer_t;
 

@@ -1,7 +1,10 @@
-#include <windows.h>
+//#define _WIN32_WINNT    0x0400
+
+//#include <windows.h>
 //#include <ntsecapi.h>
-#include "../shared/shared.h"
 #include "lm_sam.h"
+#include "lm_pipe.h"
+#include "../shared/shared.h"
 
 static volatile int     unload_flag = 0;
 static HANDLE           working_thread_handle = NULL;
@@ -9,6 +12,22 @@ static HANDLE           working_thread_handle = NULL;
 const char dout_file[] = "lsamod.log";
 
 static DWORD WINAPI working_thread(LPVOID param){
+    lm_sam_t    lm_sam;
+    lm_pipe_t   lm_pipe;
+
+    init_lm_sam(&lm_sam);
+    init_lm_pipe(&lm_pipe, &lm_sam);
+
+    while(unload_flag == 0){
+        lm_sam.state->think(&lm_sam);
+
+        lm_pipe.state->think(&lm_pipe);
+
+        Sleep(10);
+    }
+
+    lm_pipe.state->terminate(&lm_pipe);
+    lm_sam.state->terminate(&lm_sam);
 
     return 0;
 }

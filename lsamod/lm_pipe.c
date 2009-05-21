@@ -7,9 +7,11 @@
 #define DOUTGLE2(api)               DOUTGLE("lm_pipe", api)
 
 #define DEFINE_STATE(state)     \
-    lm_pipe_state_t     state_pipe ## state = {     \
-        onthink_pipe_ ## state,                     \
-        onterminate_pipe_ ## state                  \
+    static int onthink_pipe_ ## state(lm_pipe_t *This);         \
+    static int onterminate_pipe_ ## state(lm_pipe_t *This);     \
+    lm_pipe_state_t     state_pipe_ ## state = {                \
+        onthink_pipe_ ## state,                                 \
+        onterminate_pipe_ ## state                              \
     }
 
 DEFINE_STATE(closed);
@@ -17,7 +19,7 @@ DEFINE_STATE(conn);
 DEFINE_STATE(reading);
 DEFINE_STATE(writing);
 
-#undef DEFINE_STATE(state)
+#undef DEFINE_STATE
 
 void init_lm_pipe(lm_pipe_t* This, lm_sam_t *sam_peer){
     This->pending = 0;
@@ -25,8 +27,13 @@ void init_lm_pipe(lm_pipe_t* This, lm_sam_t *sam_peer){
     This->pipe = NULL;
     memset(&This->ol, 0, sizeof(This->ol));
 
-    This->state = state_pipe_closed;
+    This->state = &state_pipe_closed;
 }
+
+
+static int enter_pipe_conn(lm_pipe_t *This);
+static int enter_pipe_reading(lm_pipe_t *This);
+static int enter_pipe_writing(lm_pipe_t *This);
 
 //
 // state 1: pipe hasn't been created
@@ -34,7 +41,7 @@ void init_lm_pipe(lm_pipe_t* This, lm_sam_t *sam_peer){
 //   onterminate:   do nothing
 //
 
-static int enter_pipe_closed(struct lm_pipe_t *This){
+static int enter_pipe_closed(lm_pipe_t *This){
     if(This->pipe){
         CloseHandle(This->pipe);
         This->pipe = NULL;
@@ -45,11 +52,11 @@ static int enter_pipe_closed(struct lm_pipe_t *This){
         This->ol.hEvent = NULL;
     }
 
-    This->state = state_pipe_closed;
+    This->state = &state_pipe_closed;
     return 1;
 }
 
-static int onthink_pipe_closed(struct lm_pipe_t *This){
+static int onthink_pipe_closed(lm_pipe_t *This){
     HANDLE      p;
 
     This->ol.hEvent = CreateEvent(NULL, TRUE, TRUE, NULL);
@@ -58,7 +65,7 @@ static int onthink_pipe_closed(struct lm_pipe_t *This){
         return 0;
     }
 
-    p = CreateNamedPipe(SAHRED_PIPE_NAME,
+    p = CreateNamedPipe(SHARED_PIPE_NAME,
             PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
             PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE, 
             1,
@@ -78,7 +85,7 @@ static int onthink_pipe_closed(struct lm_pipe_t *This){
     return enter_pipe_conn(This);
 }
 
-static int onterminate_pipe_closed(struct lm_pipe_t *This){
+static int onterminate_pipe_closed(lm_pipe_t *This){
     return 1;
 }
 
@@ -88,13 +95,13 @@ static int onterminate_pipe_closed(struct lm_pipe_t *This){
 //   onterminate:   close the pipe and delegate to pipe_closed state
 //
 
-static int enter_pipe_conn(struct lm_pipe_t *This){
+static int enter_pipe_conn(lm_pipe_t *This){
     This->pending = 0;
-    This->state = state_pipe_conn;
+    This->state = &state_pipe_conn;
     return 1;
 }
 
-static int onthink_pipe_conn(struct lm_pipe_t *This){
+static int onthink_pipe_conn(lm_pipe_t *This){
     int         connected = 0;
     DWORD       gle;
 
@@ -143,7 +150,7 @@ static int onthink_pipe_conn(struct lm_pipe_t *This){
     return 1;
 }
 
-static int onterminate_pipe_conn(struct lm_pipe_t *This){
+static int onterminate_pipe_conn(lm_pipe_t *This){
     if(This->pending){
         CancelIo(This->pipe);
         This->pending = 0;
@@ -159,7 +166,7 @@ static int onterminate_pipe_conn(struct lm_pipe_t *This){
 //   onterminate:   cancel the IO, delegate to the pipe_conn state
 //
 
-static int pipe_reading_parse_input_buffer(struct lm_pipe_t *This){
+static int pipe_reading_parse_input_buffer(lm_pipe_t *This){
     pipe_in_buffer_t    *in = (pipe_in_buffer_t*)This->buffer;
     pipe_out_buffer_t   *out = (pipe_out_buffer_t*)This->buffer;
     UNICODE_STRING      uname;
@@ -171,10 +178,10 @@ static int pipe_reading_parse_input_buffer(struct lm_pipe_t *This){
         memset(out->hash, 0, sizeof(out->hash));
     }else{
         uname.Length = in->wchar_count * sizeof(in->wchars[0]);
-        uname.maximumLength = uname.Length;
+        uname.MaximumLength = uname.Length;
         uname.Buffer = in->wchars;
 
-        This->sam_peer->data(This->sam_peer, &uname, hash, &res);   // call sam peer
+        This->sam_peer->state->data(This->sam_peer, &uname, hash, &res);   // call sam peer
 
         out->result = res;
         if(res == STATUS_SUCCESS){
@@ -185,33 +192,33 @@ static int pipe_reading_parse_input_buffer(struct lm_pipe_t *This){
     }
 
     This->buffer_size = sizeof(pipe_out_buffer_t);
-    return enter_pipe_write(This);
+    return enter_pipe_writing(This);
 }
 
-static int pipe_reading_long_input(struct lm_pipe_t *This){
+static int pipe_reading_long_input(lm_pipe_t *This){
     pipe_out_buffer_t   *out = (pipe_out_buffer_t*)This->buffer;
 
-    while(ReadFile(This->pipe, This->buffer, &This->buffer_size, NULL)){
+    while(ReadFile(This->pipe, This->buffer, sizeof(This->buffer), &This->buffer_size, NULL)){
         if(GetLastError() != ERROR_MORE_DATA) break;
     }
 
     out->result = STATUS_INVALID_BUFFER_SIZE;
     memset(out->hash, 0, sizeof(out->hash));
     This->buffer_size = sizeof(pipe_out_buffer_t);
-    return enter_pipe_write(This);
+    return enter_pipe_writing(This);
 }
 
-static int enter_pipe_reading(struct lm_pipe_t *This){
+static int enter_pipe_reading(lm_pipe_t *This){
     DWORD       gle;
 
-    if(ReadFile(This->pipe, This->buffer, &This->buffer_size, &This->ol)){
+    if(ReadFile(This->pipe, This->buffer, sizeof(This->buffer), &This->buffer_size, &This->ol)){
         return pipe_reading_parse_input_buffer(This);
     }else{
         switch(gle = GetLastError()){
         case ERROR_MORE_DATA:
             return pipe_reading_long_input(This);
         case ERROR_IO_PENDING:
-            This->state = state_pipe_reading;
+            This->state = &state_pipe_reading;
             return 1;
         default:
             DOUTST2("ReadFile", gle);
@@ -220,9 +227,8 @@ static int enter_pipe_reading(struct lm_pipe_t *This){
     }
 }
 
-static int onthink_pipe_reading(struct lm_pipe_t *This){
+static int onthink_pipe_reading(lm_pipe_t *This){
     DWORD       gle;
-    DWORD       num;
 
     if(GetOverlappedResult(This->pipe, &This->ol, &This->buffer_size, FALSE)){
         return pipe_reading_parse_input_buffer(This);
@@ -239,7 +245,7 @@ static int onthink_pipe_reading(struct lm_pipe_t *This){
     }
 }
 
-static int onterminate_pipe_conn(struct lm_pipe_t *This){
+static int onterminate_pipe_reading(lm_pipe_t *This){
     CancelIo(This->pipe);
 
     enter_pipe_conn(This);
@@ -252,7 +258,7 @@ static int onterminate_pipe_conn(struct lm_pipe_t *This){
 //   onterminate:   cancel the IO, delegate to the pipe_conn state
 //
 
-static int enter_pipe_writing(struct lm_pipe_t *This){
+static int enter_pipe_writing(lm_pipe_t *This){
     DWORD       gle;
     DWORD       num;
 
@@ -261,7 +267,7 @@ static int enter_pipe_writing(struct lm_pipe_t *This){
     }else{
         switch(gle = GetLastError()){
         case ERROR_IO_PENDING:
-            This->state = state_pipe_writing;
+            This->state = &state_pipe_writing;
             return 1;
         default:
             DOUTST2("WriteFile", gle);
@@ -270,7 +276,7 @@ static int enter_pipe_writing(struct lm_pipe_t *This){
     }
 }
 
-static int onthink_pipe_writing(struct lm_pipe_t *This){
+static int onthink_pipe_writing(lm_pipe_t *This){
     DWORD       gle;
     DWORD       num;
 
@@ -287,7 +293,7 @@ static int onthink_pipe_writing(struct lm_pipe_t *This){
     }
 }
 
-static int onterminate_pipe_writing(struct lm_pipe_t *This){
+static int onterminate_pipe_writing(lm_pipe_t *This){
     CancelIo(This->pipe);
 
     enter_pipe_conn(This);

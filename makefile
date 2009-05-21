@@ -45,17 +45,18 @@ ODIR=.\objs
 # objs required for each module
 
 SHARED_OBJS=\
-	$(ODIR)\shmem.obj\
 	$(ODIR)\utils.obj\
 
 LSAMOD_OBJS=\
 	$(SHARED_OBJS)\
-	$(ODIR)\lm_ldr.obj\
-	$(ODIR)\dout_ods.obj\
+	$(ODIR)\lsamod.obj\
+	$(ODIR)\lm_sam.obj\
+	$(ODIR)\lm_pipe.obj\
+	$(ODIR)\dout_so.obj\
 
-NUDGE_OBJS=\
+LOADLL_OBJS=\
 	$(SHARED_OBJS)\
-	$(ODIR)\nudge.obj\
+	$(ODIR)\loadll.obj\
 	$(ODIR)\dout_so.obj\
 
 UT1_OBJS=\
@@ -66,7 +67,7 @@ UT1_OBJS=\
 
 # standart rules
 
-all : samsrv.dll lsamod.dll
+all : samsrv.dll lsamod.dll loadll.exe
 
 re : clean all
 
@@ -79,15 +80,14 @@ clean :
 ut1.exe : $(UT1_OBJS)
 	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:ut1.exe $(UT1_OBJS) kernel32.lib user32.lib
 
+loadll.exe : $(LOADLL_OBJS)
+	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:loadll.exe $(LOADLL_OBJS) kernel32.lib user32.lib
+
 nudge.exe : $(NUDGE_OBJS)
 	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:nudge.exe $(NUDGE_OBJS) kernel32.lib advapi32.lib user32.lib
 
 lsamod.dll : $(LSAMOD_OBJS) .\lsamod.def
-	$(LNK) $(LNKOPTS) /DLL /DEF:.\lsamod.def /OUT:lsamod.dll /ENTRY:DllMain $(LSAMOD_OBJS) kernel32.lib advapi32.lib user32.lib
-
-lsamod2.dll : $(LSAMOD2_OBJS) .\lsamod2.def
-	$(LNK) $(LNKOPTS) /DLL /DEBUG /DEF:.\lsamod2.def /OUT:lsamod2.dll /ENTRY:DllMain $(LSAMOD2_OBJS) kernel32.lib advapi32.lib user32.lib samsrv.lib
-
+	$(LNK) $(LNKOPTS) /DLL /DEF:.\lsamod.def /OUT:lsamod.dll /ENTRY:DllMain $(LSAMOD_OBJS) kernel32.lib advapi32.lib user32.lib samsrv.lib
 
 samsrv.dll : $(ODIR)\samsrv.obj .\samsrv.def
 	$(LNK) $(LNKOPTS) /DLL /DEF:.\samsrv.def /OUT:samsrv.dll $(ODIR)\samsrv.obj
@@ -95,10 +95,7 @@ samsrv.dll : $(ODIR)\samsrv.obj .\samsrv.def
 
 # inference rules
 
-{.\ut1}.c{$(ODIR)}.obj :
-	$(CC) $(CCOPTS) /Fo$(ODIR)\ $<
-
-{.\nudge}.c{$(ODIR)}.obj :
+{.\ut}.c{$(ODIR)}.obj :
 	$(CC) $(CCOPTS) /Fo$(ODIR)\ $<
 
 {.\samsrv}.c{$(ODIR)}.obj :
