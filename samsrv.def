@@ -1,0 +1,15 @@
+LIBRARY samsrv
+EXPORTS
+    SamrCloseHandle
+    SamrOpenDomain
+    SamIConnect
+    SamrEnumerateUsersInDomain 
+    SamrQueryInformationDomain
+    SamIGetUserLogonInformation
+    SamIGetUserLogonInformationEx
+    SamIRetrievePrimaryCredentials
+    SamIFreeSidAndAttributesList
+    SamIFree_SAMPR_USER_INFO_BUFFER
+    SamIFree_SAMPR_DOMAIN_INFO_BUFFER
+    SamIFree_SAMPR_ENUMERATION_BUFFER
+

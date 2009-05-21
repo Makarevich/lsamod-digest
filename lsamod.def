@@ -1,0 +1,6 @@
+LIBRARY lsamod
+EXPORTS
+    InitializeChangeNotify
+    PasswordChangeNotify
+    PasswordFilter
+
