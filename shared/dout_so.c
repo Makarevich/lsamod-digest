@@ -6,4 +6,6 @@ void dout(const char* message){
     WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), message, lstrlen(message), &dw, 0);
 }
 
+void dout_close(){
+}
 

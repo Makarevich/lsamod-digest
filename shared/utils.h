@@ -9,8 +9,9 @@ int unicode2ansi(LPCWSTR src, int sc, LPSTR dst, int ds);
 
 
 #define HASHLEN 16
-typedef unsigned char HASH[HASHLEN];
 #define HASHHEXLEN 32
+
+typedef unsigned char HASH[HASHLEN];
 typedef char HASHHEX[HASHHEXLEN + 1];
 
 void CvtHex(const HASH Bin, HASHHEX Hex);
