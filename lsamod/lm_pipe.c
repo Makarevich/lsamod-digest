@@ -124,7 +124,8 @@ static int onthink_pipe_conn(lm_pipe_t *This){
                 This->pending = 1;
                 break;
             default:
-                DOUTST2("ConnectNamedPipe", gle);       // FIXME: force entering closed state here
+                DOUTST2("ConnectNamedPipe", gle);
+                enter_pipe_closed(This);
                 return 0;
             }
         }
@@ -142,7 +143,8 @@ static int onthink_pipe_conn(lm_pipe_t *This){
                 connected = 0;
                 break;
             default:
-                DOUTST2("GetOverlappedResult (ConnectNamedPipe)", gle);   // FIXME: force entering closed state here
+                DOUTST2("GetOverlappedResult (ConnectNamedPipe)", gle);
+                enter_pipe_closed(This);
                 return 0;
             }
         }
