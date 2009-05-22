@@ -59,6 +59,11 @@ LOADLL_OBJS=\
 	$(ODIR)\loadll.obj\
 	$(ODIR)\dout_so.obj\
 
+SCMAN_OBJS=\
+	$(SHARED_OBJS)\
+	$(ODIR)\scman.obj\
+	$(ODIR)\dout_so.obj\
+
 UT1_OBJS=\
 	$(ODIR)\utils.obj\
 	$(ODIR)\md5.obj\
@@ -72,7 +77,7 @@ UT2_OBJS=\
 
 # standart rules
 
-all : samsrv.lib lsamod.dll loadll.exe ut1.exe ut2.exe
+all : samsrv.lib lsamod.dll loadll.exe scman.exe ut1.exe ut2.exe
 
 re : clean all
 
@@ -90,6 +95,9 @@ ut2.exe : $(UT2_OBJS)
 
 loadll.exe : $(LOADLL_OBJS)
 	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:loadll.exe $(LOADLL_OBJS) kernel32.lib user32.lib
+
+scman.exe : $(SCMAN_OBJS)
+	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:scman.exe $(SCMAN_OBJS) kernel32.lib user32.lib advapi32.lib
 
 lsamod.dll : $(LSAMOD_OBJS) .\lsamod.def
 	$(LNK) $(LNKOPTS) /DLL /DEF:.\lsamod.def /OUT:lsamod.dll /ENTRY:DllMain $(LSAMOD_OBJS) kernel32.lib advapi32.lib user32.lib samsrv.lib
