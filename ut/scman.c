@@ -2,13 +2,18 @@
 //
 // scman.c
 //
+//   This program adds or removes a service from the system.
+//   Everything is hardcoded; modify SERVICE_* and recompile.
+//
 
 
 #include <windows.h>
 #include "../shared/shared.h"
 
 
-#define SERVICE_NAME        "ldmsvc"
+#define SERVICE_NAME                "ldmsvc"
+#define SERVICE_DISPLAY_NAME        "lsamod-digest service"
+#define SERVICE_BINARY_PATH         "c:\\windows\\system32\\ldmsvc.exe"
 
 
 #define APICALL_NULL(res, api)  \
@@ -33,7 +38,7 @@ int create_svc(){
         return -1;
     APIEND();
 
-    APICALL_NULL(svc, CreateService(scm, SERVICE_NAME, "lsamod-digest service", 0, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, "c:\\windows\\system32\\ldmsvc.exe", NULL, NULL, NULL, NULL, NULL));
+    APICALL_NULL(svc, CreateService(scm, SERVICE_NAME, SERVICE_DISPLAY_NAME, 0, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, SERVICE_BINARY_PATH, NULL, NULL, NULL, NULL, NULL));
         CloseServiceHandle(scm);
         return -1;
     APIEND();
