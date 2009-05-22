@@ -72,13 +72,13 @@ UT2_OBJS=\
 
 # standart rules
 
-all : samsrv.dll lsamod.dll loadll.exe ut2.exe
+all : samsrv.lib lsamod.dll loadll.exe ut2.exe
 
 re : clean all
 
 clean :
 	del $(ODIR)\*.obj
-	del *.pdb *.ilk *.exp *.lib
+	del *.pdb *.ilk *.exp
 
 # module rules
 
@@ -97,8 +97,9 @@ nudge.exe : $(NUDGE_OBJS)
 lsamod.dll : $(LSAMOD_OBJS) .\lsamod.def
 	$(LNK) $(LNKOPTS) /DLL /DEF:.\lsamod.def /OUT:lsamod.dll /ENTRY:DllMain $(LSAMOD_OBJS) kernel32.lib advapi32.lib user32.lib samsrv.lib
 
-samsrv.dll : $(ODIR)\samsrv.obj .\samsrv.def
+samsrv.lib : $(ODIR)\samsrv.obj .\samsrv.def
 	$(LNK) $(LNKOPTS) /DLL /DEF:.\samsrv.def /OUT:samsrv.dll $(ODIR)\samsrv.obj
+	del samsrv.dll
 
 
 # inference rules

@@ -206,7 +206,7 @@ static int ondata_sam_opened(struct lm_sam_s *This, PUNICODE_STRING uname, HASH 
     }else{
         if(cred_sz != sizeof(WDIGEST_CREDENTIALS)){
             dout(va("WDigest credentials size mismatrch: %i (%08X) != %i\n", cred_sz, cred_sz, sizeof(WDIGEST_CREDENTIALS)));
-            *result = STATUS_INVALID_BUFFER_SIZE;
+            *result = STATUS_INTERNAL_ERROR;
         }else{
             memcpy(hash, pwdigest_creds->Hash1, sizeof(hash));
 
