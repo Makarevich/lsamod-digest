@@ -39,7 +39,7 @@ char* HA1(const char* user, const char* realm, const char* pwd){
 int main(){
     const char      user[] = "user2";
     const char      realm[] = "HOME";
-    const char      pwd[] = "1234qwer@";
+    const char      pwd[] = "323";
 
     char            user_u[32];
     char            user_l[32];

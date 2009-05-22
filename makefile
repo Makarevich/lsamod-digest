@@ -52,7 +52,7 @@ LSAMOD_OBJS=\
 	$(ODIR)\lsamod.obj\
 	$(ODIR)\lm_sam.obj\
 	$(ODIR)\lm_pipe.obj\
-	$(ODIR)\dout_so.obj\
+	$(ODIR)\dout_ods.obj\
 
 LOADLL_OBJS=\
 	$(SHARED_OBJS)\
@@ -63,7 +63,7 @@ UT1_OBJS=\
 	$(ODIR)\utils.obj\
 	$(ODIR)\md5.obj\
 	$(ODIR)\ut1.obj\
-	$(ODIR)\dout_f.obj\
+	$(ODIR)\dout_so.obj\
 
 UT2_OBJS=\
 	$(ODIR)\utils.obj\
@@ -72,7 +72,7 @@ UT2_OBJS=\
 
 # standart rules
 
-all : samsrv.lib lsamod.dll loadll.exe ut2.exe
+all : samsrv.lib lsamod.dll loadll.exe ut1.exe ut2.exe
 
 re : clean all
 
