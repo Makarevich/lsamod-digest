@@ -191,7 +191,7 @@ static int pipe_reading_parse_input_buffer(lm_pipe_t *This){
         uname.MaximumLength = uname.Length;
         uname.Buffer = in->wchars;
 
-        dout("Calling sam peer...\n");
+        // dout("Calling sam peer...\n");
         This->sam_peer->state->data(This->sam_peer, &uname, hash, &res);   // call sam peer
 
         out->result = res;
