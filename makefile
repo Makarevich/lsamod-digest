@@ -91,9 +91,6 @@ ut2.exe : $(UT2_OBJS)
 loadll.exe : $(LOADLL_OBJS)
 	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:loadll.exe $(LOADLL_OBJS) kernel32.lib user32.lib
 
-nudge.exe : $(NUDGE_OBJS)
-	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:nudge.exe $(NUDGE_OBJS) kernel32.lib advapi32.lib user32.lib
-
 lsamod.dll : $(LSAMOD_OBJS) .\lsamod.def
 	$(LNK) $(LNKOPTS) /DLL /DEF:.\lsamod.def /OUT:lsamod.dll /ENTRY:DllMain $(LSAMOD_OBJS) kernel32.lib advapi32.lib user32.lib samsrv.lib
 
