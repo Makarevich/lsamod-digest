@@ -67,6 +67,7 @@ SCMAN_OBJS=\
 LDMSVC_OBJS=\
 	$(SHARED_OBJS)\
 	$(ODIR)\lms_entry.obj\
+	$(ODIR)\lms_config.obj\
 	$(ODIR)\dout_f.obj\
 
 UT1_OBJS=\

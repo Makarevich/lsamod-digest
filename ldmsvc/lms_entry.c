@@ -4,6 +4,8 @@
 #include "../shared/shared.h"
 #include "../shared/shpipe.h"
 
+#include "lms_config.h"
+
 #ifdef UNICODE
 #error This application should not be compile as a unicode application
 #endif
@@ -63,6 +65,8 @@ static VOID WINAPI handler(DWORD control){
 
 /* service_main */
 static VOID WINAPI service_main(DWORD argc, LPTSTR *argv){
+    config_t        conf;
+
     h_service = RegisterServiceCtrlHandler(LDMSVC_SERVICE_NAME, handler);
     if(h_service == NULL){
         return;
@@ -70,19 +74,23 @@ static VOID WINAPI service_main(DWORD argc, LPTSTR *argv){
 
     set_state1(SERVICE_START_PENDING);        // SERVICE_START_PENDING
 
-    /*
-    // initialize here
-    if(!config_parse_args(argc, argv)){
+    if(!config_parse_args(&conf, argc, argv)){
         set_state2(SERVICE_STOPPED, 1);
         return;
     }
 
-    // initialize the network
-    if(!net_initialize()){
-        set_state2(SERVICE_STOPPED, 1);
-        return;
+    if(0){
+        dout(va("PORT: %u\n", conf.port));
+        dout(va("PIPE: %s\n", conf.pipe));
+        dout(va("MAXC: %u\n", conf.maxconn));
     }
-    */
+
+    if(0){
+        if(!net_initialize()){
+            set_state2(SERVICE_STOPPED, 1);
+            return;
+        }
+    }
 
     set_state1(SERVICE_RUNNING);              // SERVICE_RUNNING
 
@@ -109,7 +117,7 @@ static void print_usage(){
         "The following paramerets are accepted:\n"
         "  -p <num>             tcp port to listen (default: 3111)\n"
         "  -pipe <pipe-name>    pipe name that is used to connect\n"
-        "                        to lsamod.dll (default: " SHARED_PIPE_NAME ")\n"
+        "                        to lsamod.dll (default: " CONF_DEFAULT_PIPE ")\n"
         "  -mc <num>            maximum connection that\n"
         "                        service can accept (default: 8)\n"
         ;
