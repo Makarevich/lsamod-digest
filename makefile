@@ -64,6 +64,11 @@ SCMAN_OBJS=\
 	$(ODIR)\scman.obj\
 	$(ODIR)\dout_so.obj\
 
+LDMSVC_OBJS=\
+	$(SHARED_OBJS)\
+	$(ODIR)\lms_entry.obj\
+	$(ODIR)\dout_f.obj\
+
 UT1_OBJS=\
 	$(ODIR)\utils.obj\
 	$(ODIR)\md5.obj\
@@ -77,7 +82,7 @@ UT2_OBJS=\
 
 # standart rules
 
-all : samsrv.lib lsamod.dll loadll.exe scman.exe ut1.exe ut2.exe
+all : samsrv.lib lsamod.dll loadll.exe scman.exe ldmsvc.exe ut1.exe ut2.exe
 
 re : clean all
 
@@ -99,6 +104,9 @@ loadll.exe : $(LOADLL_OBJS)
 scman.exe : $(SCMAN_OBJS)
 	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:scman.exe $(SCMAN_OBJS) kernel32.lib user32.lib advapi32.lib
 
+ldmsvc.exe : $(LDMSVC_OBJS)
+	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:ldmsvc.exe $(LDMSVC_OBJS) kernel32.lib user32.lib advapi32.lib
+
 lsamod.dll : $(LSAMOD_OBJS) .\lsamod.def
 	$(LNK) $(LNKOPTS) /DLL /DEF:.\lsamod.def /OUT:lsamod.dll /ENTRY:DllMain $(LSAMOD_OBJS) kernel32.lib advapi32.lib user32.lib samsrv.lib
 
@@ -112,10 +120,10 @@ samsrv.lib : $(ODIR)\samsrv.obj .\samsrv.def
 {.\ut}.c{$(ODIR)}.obj :
 	$(CC) $(CCOPTS) /Fo$(ODIR)\ $<
 
-{.\samsrv}.c{$(ODIR)}.obj :
+{.\ldmsvc}.c{$(ODIR)}.obj :
 	$(CC) $(CCOPTS) /Fo$(ODIR)\ $<
 
-{.\lsamod2}.c{$(ODIR)}.obj :
+{.\samsrv}.c{$(ODIR)}.obj :
 	$(CC) $(CCOPTS) /Fo$(ODIR)\ $<
 
 {.\lsamod}.c{$(ODIR)}.obj :

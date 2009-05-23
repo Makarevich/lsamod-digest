@@ -13,7 +13,7 @@
 
 #define SERVICE_NAME                "ldmsvc"
 #define SERVICE_DISPLAY_NAME        "lsamod-digest service"
-#define SERVICE_BINARY_PATH         "c:\\windows\\system32\\ldmsvc.exe"
+#define SERVICE_BINARY_PATH         "e:\\Other\\Stud\\term\\year3\\lsamod-digest\\ldmsvc.exe"
 
 
 #define APICALL_NULL(res, api)  \
