@@ -26,15 +26,17 @@
 
 typedef struct {
     void*           net;
+    void*           pipe;
     HANDLE          *ths;
     int             ths_count;
     int             max_conn;
-    HANDLE          shutdown;           // manual reset
-    HANDLE          thread_ready;       // auto reset
+    HANDLE          shutdown;           // manual reset event
+    HANDLE          thread_ready;       // auto reset event
+    HANDLE          pipe_lock;          // mutex
     void*           current_sock;
 } threads_t;
 
-void* threads_start(void* net, int max_conn){
+void* threads_start(void* net, void* pipe, int max_conn){
     threads_t   *threads;
     int         r;
 
@@ -64,9 +66,19 @@ void* threads_start(void* net, int max_conn){
         return NULL;
     }
 
+    if((threads->pipe_lock = CreateMutex(NULL, FALSE, NULL)) == NULL){
+        DOUTGLE2("CreateEvent (thread_ready)");
+        CloseHandle(threads->thread_ready);
+        CloseHandle(threads->shutdown);
+        HFree(threads->ths);
+        HFree(threads);
+        return NULL;
+    }
+
     threads->max_conn = max_conn;
     threads->ths_count = 0;
     threads->net = net;
+    threads->pipe = pipe;
 
     return threads;
 }
@@ -106,7 +118,10 @@ int threads_stop(void *th){
 
 static DWORD WINAPI connection_daemon(LPVOID params){
     HANDLE      sd;
+    HANDLE      pipe_lock;
     void*       sock;
+    void*       pipe;
+
 
     char        buffer[NET_LINE_BUFFER_SIZE];
     int         count = 0;
@@ -114,8 +129,10 @@ static DWORD WINAPI connection_daemon(LPVOID params){
     {
         threads_t*  threads = (threads_t*)params;
 
-        sd = threads->shutdown;
-        sock = threads->current_sock;
+        sd          = threads->shutdown;
+        pipe_lock   = threads->pipe_lock;
+        sock        = threads->current_sock;
+        pipe        = threads->pipe;
 
         SetEvent(threads->thread_ready);
     }
@@ -127,15 +144,16 @@ static DWORD WINAPI connection_daemon(LPVOID params){
     }
 
     for(;;){
-        switch(net_recvline(sock, buffer, &count, sizeof(buffer)/sizeof(buffer[0]))){
+        switch(net_recvline(sock, buffer, &count, 10 /*sizeof(buffer)/sizeof(buffer[0]) */)){
         case RECVLINE_ERROR:
             net_closesocket(sock);
             return 0;
         case RECVLINE_MAXCOUNT:
             {
-                const char line[] = "ERR incoming line is too long\n";
+                char line[] = "ERR incoming line is too long\n";
 
-                NET_SEND(line, strlen(line));
+                // NET_SEND(line, strlen(line));
+                NET_SEND(line, sizeof(line) - 1);
 
                 count = 0;
                 continue;
@@ -148,9 +166,9 @@ static DWORD WINAPI connection_daemon(LPVOID params){
             goto l_close;
         case RECVLINE_OK:
             {
-                const char hash[] = "AAAAAAAA" "BBBBBBBB" "CCCCCCCC" "DDDDDDDD" "\n";
+                char hash[] = "AAAAAAAA" "BBBBBBBB" "CCCCCCCC" "DDDDDDDD" "\n";
 
-                NET_SEND(hash, 33);
+                NET_SEND(hash, sizeof(hash) - 1);
                 continue;
             }
         default:

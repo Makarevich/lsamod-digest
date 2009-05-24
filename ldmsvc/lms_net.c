@@ -238,6 +238,8 @@ int net_recvline(void* s, char* buffer, int* pcount, int max_count){
                 return RECVLINE_OK;
             }
 
+            if(c == '\r') break;    // ignore '\r' character
+
             buffer[(*pcount)++] = c;
             break;
         default:

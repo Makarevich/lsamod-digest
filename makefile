@@ -71,6 +71,7 @@ LDMSVC_OBJS=\
 	$(ODIR)\lms_config.obj\
 	$(ODIR)\lms_net.obj\
 	$(ODIR)\lms_threads.obj\
+	$(ODIR)\lms_pipe.obj\
 	$(ODIR)\dout_f.obj\
 
 UT1_OBJS=\
