@@ -67,7 +67,10 @@ SCMAN_OBJS=\
 LDMSVC_OBJS=\
 	$(SHARED_OBJS)\
 	$(ODIR)\lms_entry.obj\
+	$(ODIR)\lms_heap.obj\
 	$(ODIR)\lms_config.obj\
+	$(ODIR)\lms_net.obj\
+	$(ODIR)\lms_threads.obj\
 	$(ODIR)\dout_f.obj\
 
 UT1_OBJS=\
@@ -106,7 +109,7 @@ scman.exe : $(SCMAN_OBJS)
 	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:scman.exe $(SCMAN_OBJS) kernel32.lib user32.lib advapi32.lib
 
 ldmsvc.exe : $(LDMSVC_OBJS)
-	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:ldmsvc.exe $(LDMSVC_OBJS) kernel32.lib user32.lib advapi32.lib
+	$(LNK) $(LNKOPTS) /ENTRY:main /OUT:ldmsvc.exe $(LDMSVC_OBJS) kernel32.lib user32.lib advapi32.lib ws2_32.lib
 
 lsamod.dll : $(LSAMOD_OBJS) .\lsamod.def
 	$(LNK) $(LNKOPTS) /DLL /DEF:.\lsamod.def /OUT:lsamod.dll /ENTRY:DllMain $(LSAMOD_OBJS) kernel32.lib advapi32.lib user32.lib samsrv.lib

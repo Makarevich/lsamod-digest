@@ -4,7 +4,10 @@
 #include "../shared/shared.h"
 #include "../shared/shpipe.h"
 
+#include "lms_heap.h"
 #include "lms_config.h"
+#include "lms_net.h"
+#include "lms_threads.h"
 
 #ifdef UNICODE
 #error This application should not be compile as a unicode application
@@ -66,6 +69,8 @@ static VOID WINAPI handler(DWORD control){
 /* service_main */
 static VOID WINAPI service_main(DWORD argc, LPTSTR *argv){
     config_t        conf;
+    void*           net;
+    void*           threads;
 
     h_service = RegisterServiceCtrlHandler(LDMSVC_SERVICE_NAME, handler);
     if(h_service == NULL){
@@ -74,7 +79,14 @@ static VOID WINAPI service_main(DWORD argc, LPTSTR *argv){
 
     set_state1(SERVICE_START_PENDING);        // SERVICE_START_PENDING
 
+    if(!heap_start()){
+        dout("Failed to create the heap\n");
+        set_state2(SERVICE_STOPPED, 1);
+        return;
+    }
+
     if(!config_parse_args(&conf, argc, argv)){
+        heap_stop();
         set_state2(SERVICE_STOPPED, 1);
         return;
     }
@@ -85,23 +97,40 @@ static VOID WINAPI service_main(DWORD argc, LPTSTR *argv){
         dout(va("MAXC: %u\n", conf.maxconn));
     }
 
-    if(0){
-        if(!net_initialize()){
-            set_state2(SERVICE_STOPPED, 1);
-            return;
-        }
+    if((net = net_start()) == NULL){
+        heap_stop();
+        set_state2(SERVICE_STOPPED, 1);
+        return;
+    }
+
+    if((threads = threads_start(net, conf.maxconn)) == NULL){
+        net_stop(net);
+        heap_stop();
+        set_state2(SERVICE_STOPPED, 1);
+        return;
     }
 
     set_state1(SERVICE_RUNNING);              // SERVICE_RUNNING
 
     while(svc_state == SERVICE_RUNNING){
-        Sleep(10);
+        if(!net_is_ready(net)){
+            net_bind(net, NULL, conf.port);
+        }
+
+        if(!threads_think(threads)){
+            break;
+        }
+
+        Sleep(1);
     }
 
     set_state1(SERVICE_STOP_PENDING);         // SERVICE_STOP_PENDING
 
     // close all here
-    //net_finalize();
+    threads_stop(threads);
+    net_stop(net);
+
+    heap_stop();
 
     set_state2(SERVICE_STOPPED, 0);           // SERVICE_STOPPED
 }

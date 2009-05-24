@@ -37,7 +37,7 @@ int config_parse_args(config_t* conf, int argc, const char **argv){
     conf->maxconn = CONF_DEFAULT_MAXCONN;
     strncpy(conf->pipe, CONF_DEFAULT_PIPE, sizeof(conf->pipe));
 
-    dout(va("Param cnt: %u\n", argc));
+    // dout(va("Param cnt: %u\n", argc));
 
     while(next_arg(&argc, &argv)){
         if(!strcmp("-p", *argv)){
