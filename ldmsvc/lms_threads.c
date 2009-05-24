@@ -153,7 +153,7 @@ static DWORD WINAPI connection_daemon(LPVOID params){
     }
 
     for(;;){
-        switch(net_recvline(sock, buffer, &count, 10 /*sizeof(buffer)/sizeof(buffer[0]) */)){
+        switch(net_recvline(sock, buffer, &count, sizeof(buffer)/sizeof(buffer[0]))){
         case RECVLINE_ERROR:
             net_closesocket(sock);
             return 0;
