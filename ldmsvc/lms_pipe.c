@@ -64,6 +64,7 @@ int pipe_open(void* p){
 
     if(pipe->pipe == NULL){
         HANDLE  h;
+        DWORD   dw;
 
         if(!WaitNamedPipe(pipe->name, 0)){
             DOUTGLE2("WaitNamedPipe");
@@ -74,6 +75,13 @@ int pipe_open(void* p){
             0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         if(h == INVALID_HANDLE_VALUE){
             DOUTGLE2("CreateFile");
+            return 0;
+        }
+
+        dw = PIPE_READMODE_MESSAGE;
+        if(!SetNamedPipeHandleState(h, &dw, NULL, NULL)){
+            DOUTGLE2("SetNamedPipeHandleState");
+            CloseHandle(h);
             return 0;
         }
 

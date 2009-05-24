@@ -2,10 +2,12 @@
 #include <windows.h>
 
 #include "../shared/shared.h"
+#include "../shared/shpipe.h"
 
 #include "lms_heap.h"
 #include "lms_net.h"
 #include "lms_threads.h"
+#include "lms_pipe.h"
 
 #define HAlloc(sz)      heap_alloc(sz)
 #define HFree(p)        heap_free(p)
@@ -106,6 +108,7 @@ int threads_stop(void *th){
         }
     }
 
+    CloseHandle(threads->pipe_lock);
     CloseHandle(threads->thread_ready);
     CloseHandle(threads->shutdown);
     HFree(threads->ths);
@@ -137,10 +140,16 @@ static DWORD WINAPI connection_daemon(LPVOID params){
         SetEvent(threads->thread_ready);
     }
 
-#define NET_SEND(buf, size)     \
-    if(!net_sendline(sock, buf, size)){         \
+#define NET_SEND(buf, sz)     \
+    if(!net_sendline(sock, buf, sz)){           \
         DOUTST_("daemon", "net_sendline");      \
         goto l_close;                           \
+    }                                           \
+
+#define NET_SEND_STR(str)     \
+    {                                           \
+        char buf[] = str;                       \
+        NET_SEND(buf, sizeof(buf) - 1)          \
     }
 
     for(;;){
@@ -150,10 +159,7 @@ static DWORD WINAPI connection_daemon(LPVOID params){
             return 0;
         case RECVLINE_MAXCOUNT:
             {
-                char line[] = "ERR incoming line is too long\n";
-
-                // NET_SEND(line, strlen(line));
-                NET_SEND(line, sizeof(line) - 1);
+                NET_SEND_STR("ERR incoming line is too long\n");
 
                 count = 0;
                 continue;
@@ -166,9 +172,59 @@ static DWORD WINAPI connection_daemon(LPVOID params){
             goto l_close;
         case RECVLINE_OK:
             {
-                char hash[] = "AAAAAAAA" "BBBBBBBB" "CCCCCCCC" "DDDDDDDD" "\n";
+                // char hash[] = "AAAAAAAA" "BBBBBBBB" "CCCCCCCC" "DDDDDDDD" "\n";
+                // NET_SEND(hash, sizeof(hash) - 1);
 
-                NET_SEND(hash, sizeof(hash) - 1);
+                char                *name;
+                pipe_in_buffer_t    in;
+                pipe_out_buffer_t   out;
+                int                 r, r2;
+                char                outbuf[64];
+
+                r = ansi2unicode(buffer, count, in.wchars, sizeof(in.wchars));
+                if(r == 0){
+                    NET_SEND_STR("ERR ansi-to-unicode name conversion failed\n");
+                    count = 0;
+                    continue;
+                }
+
+                in.wchar_count = r;
+
+                while(WaitForSingleObject(pipe_lock, 0) == WAIT_TIMEOUT){
+                    if(WaitForSingleObject(sd, 10) == WAIT_OBJECT_0){
+                        goto l_close;
+                    }
+                }
+
+retry_transaction:
+                r2 = pipe_transact(pipe, &in, sizeof(in), &out, sizeof(out), &r);
+                switch(r2){
+                case PIPE_PENDING:
+                    goto retry_transaction;
+                case PIPE_OK:
+                    ReleaseMutex(pipe_lock);
+                    break;
+                case PIPE_ERROR:
+                default:
+                    ReleaseMutex(pipe_lock);
+                    NET_SEND_STR("ERR pipe error\n");
+                    count = 0;
+                    continue;
+                }
+
+                if(out.result){
+                    strcpy(outbuf, va("ERR SYS %08X\n", out.result));
+                }else{
+                    HASHHEX     hex;
+
+                    CvtHex(out.hash, hex);
+                    strcpy(outbuf, hex);
+                    strcat(outbuf, "\n");
+                }
+
+                NET_SEND(outbuf, strlen(outbuf));
+
+                count = 0;
                 continue;
             }
         default:

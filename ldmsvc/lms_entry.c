@@ -126,7 +126,7 @@ static VOID WINAPI service_main(DWORD argc, LPTSTR *argv){
     }
 
     // start threads
-    if((threads = threads_start(net, conf.maxconn)) == NULL){
+    if((threads = threads_start(net, pipe, conf.maxconn)) == NULL){
         pipe_stop(pipe);
         net_stop(net);
         heap_stop();

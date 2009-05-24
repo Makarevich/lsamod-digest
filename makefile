@@ -52,7 +52,7 @@ LSAMOD_OBJS=\
 	$(ODIR)\lsamod.obj\
 	$(ODIR)\lm_sam.obj\
 	$(ODIR)\lm_pipe.obj\
-	$(ODIR)\dout_ods.obj\
+	$(ODIR)\dout_so.obj\
 
 LOADLL_OBJS=\
 	$(SHARED_OBJS)\

@@ -5,6 +5,7 @@
 char *va(const char* msg, ... );
 
 int unicode2ansi(LPCWSTR src, int sc, LPSTR dst, int ds);
+int ansi2unicode(LPCSTR src, int sc, LPWSTR dst, int ds);
 
 
 

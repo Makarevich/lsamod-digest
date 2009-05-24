@@ -19,8 +19,7 @@ char *va(const char* msg, ... ){
 
 
 int ansi2unicode(LPCSTR src, int sc, LPWSTR dst, int ds){
-    // return MultiByteToWideChar(CP_ACP, 0, src, sc, dst, ds);
-    return 0;
+    return MultiByteToWideChar(CP_ACP, 0, src, sc, dst, ds / sizeof(WCHAR));
 }
 
 int unicode2ansi(LPCWSTR src, int sc, LPSTR dst, int ds){
