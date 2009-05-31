@@ -1,0 +1,41 @@
+#!/bin/bash
+
+TIMEOUT=10
+LINGER=10
+
+# creating pipes
+
+tmpfile="lsamod$RANDOM$RANDOM$RANDOM"
+
+mkfifo $tmpfile
+exec 5<>$tmpfile
+rm -f $tmpfile
+
+mkfifo $tmpfile
+exec 6<>$tmpfile
+rm -f $tmpfile
+
+opened=false
+
+while true; do
+    if read -t $LINGER ; then
+        netcat $1 $2 <&5 >&6 5>&- 6>&- &
+        let "opened=true"
+        echo $REPLY >&5
+
+        if read -t $TIMEOUT <&6 ; then
+            echo $REPLY
+        else
+            echo "ERR network error"
+        fi
+    else
+        if $opened ; then
+            kill -9 %1
+            opened=false
+        fi
+    fi
+    sleep 0
+done
+
+exit 0
+
