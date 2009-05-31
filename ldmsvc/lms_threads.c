@@ -40,14 +40,15 @@ typedef struct {
 
 void* threads_start(void* net, void* pipe, int max_conn){
     threads_t   *threads;
-    int         r;
+
+    if((max_conn <= 0) || (max_conn > MAX_CONN)) max_conn = MAX_CONN;
 
     if((threads = (threads_t*)HAlloc(sizeof(threads_t))) == NULL){
         DOUTHEAP();
         return NULL;
     }
 
-    if((threads->ths = (HANDLE*)HAlloc(r = sizeof(HANDLE) * max_conn)) == NULL){
+    if((threads->ths = (HANDLE*)HAlloc(sizeof(HANDLE) * max_conn)) == NULL){
         DOUTHEAP();
         HFree(threads);
         return NULL;
@@ -269,8 +270,8 @@ int threads_think(void* th){
         }
     }
 
-    if((threads->ths_count < threads->max_conn) && (net_is_ready(threads->net))){
-        for(;;){
+    if(net_is_ready(threads->net)){
+        while(threads->ths_count < threads->max_conn){
             DWORD       tid;
             HANDLE      h;
             void*       sock;
