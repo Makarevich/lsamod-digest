@@ -3,7 +3,7 @@
 TIMEOUT=10
 LINGER=10
 
-# creating pipes
+# create pipes
 
 tmpfile="lsamod$RANDOM$RANDOM$RANDOM"
 
@@ -15,16 +15,18 @@ mkfifo $tmpfile
 exec 6<>$tmpfile
 rm -f $tmpfile
 
-opened=false
-
+# get rid of annoying error messages
 exec 2> /dev/null
 
-while true; do
-    if read -t $LINGER ; then
-        if ! $opened ; then
-            netcat $1 $2 <&5 >&6 5>&- 6>&- &
-            opened=true
-        fi
+#echo "Log opened" >/home/squid/log
+
+while read ; do
+    netcat $1 $2 <&5 >&6 5>&- 6>&- &
+
+    while true ; do
+        # we assume netcat is working within this loop
+
+        #echo "Resolving $REPLY" >>/home/squid/log
 
         echo $REPLY | sed 's/"\([^"]*\)":"[^"]*"/\1/' >&5
         if read -t $TIMEOUT <&6 ; then
@@ -32,15 +34,14 @@ while true; do
         else
             echo "ERR network error"
             kill -9 %1
-            opened=false
+            break;
         fi
-    else
-        if $opened ; then
+
+        if ! read -t $LINGER ; then
             kill -9 %1
-            opened=false
+            break;
         fi
-    fi
-    sleep 0
+    done
 done
 
 exit 0
